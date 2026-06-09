@@ -4,6 +4,8 @@ from game.types import GameStatus, Position, RevealResult
 from generator.random_generator import generate_board
 import time
 
+from solver.hints import get_solve_step
+
 
 class GameState:
     def __init__(self, width: int, height: int, mine_count: int, no_check: bool):
@@ -16,6 +18,8 @@ class GameState:
         self.status = GameStatus.NOT_STARTED
         self.start_time = None
         self.end_time = None
+        self.hint = None
+        self.hint_count = 0
 
     def reveal_cell(self, pos: Position) -> RevealResult:
         if self.status == GameStatus.NOT_STARTED:
@@ -40,6 +44,25 @@ class GameState:
 
         return result
 
+    def toggle_hint(self, reset : bool = False) -> None:
+        if self.hint:
+            if reset:
+                self.toggle_highlight(self.hint.position)
+                self.hint = None
+            return
+        self.hint_count += 1
+        self.hint = get_solve_step(board=self.board)
+        self.toggle_highlight(self.hint.position)
+
+
+    def toggle_highlight(self, pos: Position) -> None:
+        if self.status in {GameStatus.WON, GameStatus.LOST}:
+            return
+        cell = self.board.get_cell(pos)
+        if cell.is_flagged or cell.is_revealed:
+            return
+        self.board.toggle_highlight(pos)
+
     def toggle_flag(self, pos: Position) -> None:
         if self.status in {GameStatus.WON, GameStatus.LOST}:
             return
@@ -51,6 +74,8 @@ class GameState:
         self.status = GameStatus.NOT_STARTED
         self.start_time = None
         self.end_time = None
+        self.hint = None
+        self.hint_count = 0
 
 
     def remaining_flags(self) -> int:
@@ -66,6 +91,6 @@ class GameState:
             if not self.end_time:
                 self.end_time = time_spent_after_first_click
 
-            return self.end_time if self.status == GameStatus.WON else "DNF, Loser"
+            return self.end_time if self.status == GameStatus.WON else f"DNF: It took {self.end_time} to lose."
 
         return f"{int(minutes):02d}:{int(seconds):02d}"

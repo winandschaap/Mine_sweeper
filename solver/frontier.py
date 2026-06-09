@@ -2,6 +2,14 @@ from game.board import Board
 from game.types import Position
 
 
+def generate_frontier(board: Board) -> set[Position]:
+    return set(
+        Position(x, y)
+        for x in range(board.width)
+        for y in range(board.height)
+        if is_frontier_cell(board, Position(x, y))
+    )
+
 def is_frontier_cell(board: Board, pos: Position) -> bool:
 
     cell = board.get_cell(pos)

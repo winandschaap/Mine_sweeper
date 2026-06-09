@@ -1,10 +1,13 @@
 import pygame
 from game.game_state import GameState
 from game.types import GameStatus, Position
+from win32api import GetSystemMetrics
 
+WIDTH = GetSystemMetrics(0)
+HEIGHT = GetSystemMetrics(1)
 # Declare sizes and framerate
-CELL_SIZE = 72
-TOP_BAR_HEIGHT = 120
+CELL_SIZE = HEIGHT//15
+TOP_BAR_HEIGHT = HEIGHT//12
 FPS = 60
 
 # Give RGB values for needed values
@@ -18,6 +21,7 @@ YELLOW = (230, 190, 60)
 CELL_HIDDEN = (90, 90, 100)
 CELL_REVEALED = (185, 185, 190)
 CELL_BORDER = (45, 45, 50)
+CELL_HINT = (200,0,100)
 
 class PygameUI:
     def __init__(self, width: int = 9, height: int = 9, mine_count: int = 16, no_check: bool = False):
@@ -55,12 +59,18 @@ class PygameUI:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.game.reset()
+                elif event.key == pygame.K_h:
+                    if self.game.status == GameStatus.RUNNING:
+                        self.game.toggle_hint()
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pos = self.screen_to_position(event.pos)
 
                 if pos is None:
                     continue
+                if self.game.hint:
+                    if self.game.hint.position == pos:
+                        self.game.toggle_hint(True)
                 if event.button == 1:
                     self.game.reveal_cell(pos)
                 elif event.button == 3:
@@ -106,8 +116,12 @@ class PygameUI:
 
         restart_text = self.font.render("ESC = restart", True, TEXT)
         self.screen.blit(restart_text, (self.screen_width - restart_text.get_width()-CELL_SIZE//4, restart_text.get_height()//2))
+
         timer_text = self.font.render(f"Time: {self.game.current_time()}", True, TEXT)
         self.screen.blit(timer_text, (CELL_SIZE//4, (timer_text.get_height()+TOP_BAR_HEIGHT)//2))
+
+        hints_text = self.font.render(f"Hints used (h): {self.game.hint_count}", True, TEXT)
+        self.screen.blit(hints_text, (self.screen_width - hints_text.get_width()-CELL_SIZE//4,(hints_text.get_height()+TOP_BAR_HEIGHT)//2))
 
 
     def draw_board(self) -> None:
@@ -126,6 +140,8 @@ class PygameUI:
                 )
                 if cell.is_revealed:
                     pygame.draw.rect(self.screen, CELL_REVEALED, rect)
+                elif cell.is_highlight:
+                    pygame.draw.rect(self.screen, CELL_HINT, rect)
                 else:
                     pygame.draw.rect(self.screen, CELL_HIDDEN, rect)
 
@@ -138,6 +154,7 @@ class PygameUI:
                         self.draw_number(rect, cell.neighbor_mines)
                 elif cell.is_flagged:
                     self.draw_flag(rect)
+
 
         if self.game.status == GameStatus.LOST:
             msg_background = self.big_font.render("Game Over", True, BLACK)

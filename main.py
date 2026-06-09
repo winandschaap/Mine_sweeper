@@ -2,7 +2,7 @@ from ui.pygame_ui import PygameUI
 
 
 def main() -> None:
-    game = PygameUI(6, 6, 8, no_check=False)
+    game = PygameUI(16, 10, 32, no_check=False)
     game.run()
 
 

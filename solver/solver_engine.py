@@ -3,7 +3,7 @@ from game.types import RevealResult
 from game.types import Position
 from solver.basic_solver import find_basic_actions
 from game.rules import is_win
-from solver.frontier import is_frontier_cell, refresh_frontier_position
+from solver.frontier import is_frontier_cell, refresh_frontier_position, generate_frontier
 from solver.subset_solver import find_subset_actions
 from solver.types import SolverActionType, SolverAction
 from copy import deepcopy
@@ -63,7 +63,7 @@ def find_actions(board: Board, frontier: set[Position]) -> list[SolverAction]:
 
 def is_solvable_by_basic_rules(possible_board: Board) -> bool:
     board = deepcopy(possible_board)
-    frontier = set(Position(x, y) for x in range(possible_board.width) for y in range(possible_board.height) if is_frontier_cell(board, Position(x, y)))
+    frontier = generate_frontier(possible_board)
     counter = 0
     global subset_counter
     subset_counter = 0

@@ -1,6 +1,6 @@
 from game.types import Position
 from game.board import Board
-from solver.types import Constraint, SolverAction, SolverActionType
+from solver.types import Constraint, SolverAction, SolverActionType, SolverUsed
 
 
 def build_constraints(board: Board, frontier: set[Position]) -> list[Constraint]:
@@ -43,10 +43,10 @@ def actions_from_constraint_pair(a: Constraint, b: Constraint) -> list[SolverAct
 
     if diff_mines == 0:
         for pos in diff_cells:
-            actions.append(SolverAction(pos, SolverActionType.OPEN))
+            actions.append(SolverAction(pos, SolverActionType.OPEN, SolverUsed.SUBSET))
     if diff_mines == len(diff_cells):
         for pos in diff_cells:
-            actions.append(SolverAction(pos, SolverActionType.FLAG))
+            actions.append(SolverAction(pos, SolverActionType.FLAG, SolverUsed.SUBSET))
 
     return actions
 

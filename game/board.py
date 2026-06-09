@@ -139,6 +139,17 @@ class Board:
             else:
                 nb_cell.neighbors_flagged -= 1
 
+    def generate_hint(self):
+        pass
+
+    def toggle_highlight(self, pos: Position) -> None:
+        if not self.in_bounds(pos):
+            return
+        cell = self.get_cell(pos)
+        if cell.is_flagged or cell.is_revealed:
+            return
+        cell.is_highlight = not cell.is_highlight
+
     def reveal_all_mines(self) -> None:
         for row in self.grid:
             for cell in row:
