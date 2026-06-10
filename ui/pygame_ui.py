@@ -25,7 +25,8 @@ CELL_HINT = (200,0,100)
 
 class PygameUI:
     def __init__(self, width: int = 9, height: int = 9, mine_count: int = 16, no_check: bool = False):
-        pygame.init()
+        pygame.display.init()
+        pygame.font.init()
         self.no_check = no_check
         self.game = GameState(width, height, mine_count, self.no_check)
         self.screen_width = width * CELL_SIZE

@@ -1,11 +1,16 @@
 import random
+from copy import deepcopy
 from collections import deque
-
 from game.cell import Cell
 from game.types import Position, RevealResult
 
 
 class Board:
+    _neighbor_caches: dict[
+        tuple[int, int],
+        dict[Position, tuple[Position, ...]]
+    ] = {}
+
     def __init__(self, width: int, height: int, mine_count: int):
         if mine_count >= width * height:
             raise ValueError('mine count must be less than width * height')
@@ -18,7 +23,44 @@ class Board:
         ]
 
         self.mines_placed: bool = False
+        dimensions = (width, height)
+        if dimensions not in self._neighbor_caches:
+            self._neighbor_caches[dimensions] = self._build_neighbor_cache(
+                width,
+                height
+            )
+        self._neighbor_cache = self._neighbor_caches[dimensions]
 
+    @staticmethod
+    def _build_neighbor_cache(
+        width: int,
+        height: int
+    ) -> dict[Position, tuple[Position, ...]]:
+        cache: dict[Position, tuple[Position, ...]] = {}
+        for y in range(height):
+            for x in range(width):
+                pos = Position(x, y)
+                cache[pos] = tuple(
+                    Position(x + dx, y + dy)
+                    for dy in (-1, 0, 1)
+                    for dx in (-1, 0, 1)
+                    if (dx != 0 or dy != 0)
+                    and 0 <= x + dx < width
+                    and 0 <= y + dy < height
+                )
+        return cache
+
+    def __deepcopy__(self, memo: dict[int, object]) -> 'Board':
+        copied = type(self).__new__(type(self))
+        memo[id(self)] = copied
+
+        copied.width = self.width
+        copied.height = self.height
+        copied.mine_count = self.mine_count
+        copied.grid = deepcopy(self.grid, memo)
+        copied.mines_placed = self.mines_placed
+        copied._neighbor_cache = self._neighbor_cache
+        return copied
     def in_bounds(self, pos: Position) -> bool:
         return 0 <= pos.x < self.width and 0 <= pos.y < self.height
 
@@ -27,18 +69,8 @@ class Board:
             raise IndexError(f'Position out of bounds: {pos}')
         return self.grid[pos.y][pos.x]
 
-    def neighbors(self, pos: Position) -> list[Position]:
-        result = []
-
-        for dy in (-1, 0, 1):
-            for dx in (-1, 0, 1):
-                if dx == 0 and dy == 0:
-                    continue
-                neighbor = Position(pos.x + dx, pos.y + dy)
-
-                if self.in_bounds(neighbor):
-                    result.append(neighbor)
-        return result
+    def neighbors(self, pos: Position) -> tuple[Position, ...]:
+        return self._neighbor_cache[pos]
 
     def place_mines(self, first_click: Position) -> None:
         """
@@ -90,8 +122,12 @@ class Board:
 
         cell = self.get_cell(pos)
 
-        if cell.is_revealed or cell.is_flagged:
+        if cell.is_flagged:
             return RevealResult.IGNORED, set()
+
+        if cell.is_revealed:
+            if cell.neighbors_flagged == cell.neighbor_mines:
+                return self.reveal_neighbors(pos)
 
         if cell.is_mine:
             cell.is_revealed = True
@@ -99,6 +135,23 @@ class Board:
 
         revealed_positions = self._flood_reveal(pos)
         return RevealResult.REVEALED, revealed_positions
+
+    def reveal_neighbors(self, pos: Position) -> tuple[RevealResult, set[Position]]:
+        added_positions = set()
+        neighbors = self.neighbors(pos)
+        for neighbor in neighbors:
+            cell = self.get_cell(neighbor)
+            if cell.is_revealed or cell.is_flagged:
+                continue
+            result, revealed_positions = self.reveal(neighbor)
+            if result == RevealResult.HIT_MINE:
+                return RevealResult.HIT_MINE, set()
+            #cell.is_revealed = True
+            added_positions.update(revealed_positions)
+        if added_positions:
+            return RevealResult.REVEALED, added_positions
+        return RevealResult.IGNORED, set()
+
 
     def _flood_reveal(self, start: Position) -> set[Position]:
         revealed_positions: set[Position] = set()
@@ -141,14 +194,6 @@ class Board:
 
     def generate_hint(self):
         pass
-
-    def toggle_highlight(self, pos: Position) -> None:
-        if not self.in_bounds(pos):
-            return
-        cell = self.get_cell(pos)
-        if cell.is_flagged or cell.is_revealed:
-            return
-        cell.is_highlight = not cell.is_highlight
 
     def reveal_all_mines(self) -> None:
         for row in self.grid:

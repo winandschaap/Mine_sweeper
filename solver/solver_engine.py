@@ -3,7 +3,7 @@ from game.types import RevealResult
 from game.types import Position
 from solver.basic_solver import find_basic_actions
 from game.rules import is_win
-from solver.frontier import is_frontier_cell, refresh_frontier_position, generate_frontier
+from solver.frontier import refresh_frontier_position, generate_frontier
 from solver.subset_solver import find_subset_actions
 from solver.types import SolverActionType, SolverAction
 from copy import deepcopy

@@ -61,7 +61,7 @@ class GameState:
         cell = self.board.get_cell(pos)
         if cell.is_flagged or cell.is_revealed:
             return
-        self.board.toggle_highlight(pos)
+        cell.is_highlight = not cell.is_highlight
 
     def toggle_flag(self, pos: Position) -> None:
         if self.status in {GameStatus.WON, GameStatus.LOST}:
