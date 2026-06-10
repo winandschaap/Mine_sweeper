@@ -51,7 +51,7 @@ class Board:
         return cache
 
     def __deepcopy__(self, memo: dict[int, object]) -> 'Board':
-        copied = type(self).__new__(type(self))
+        copied = object.__new__(type(self))
         memo[id(self)] = copied
 
         copied.width = self.width
@@ -220,7 +220,7 @@ class Board:
         return self.mine_count - self.flag_count()
 
     def reset(self) -> None:
-        self.grid: list[list[Cell]] = [
+        self.grid = [
             [Cell() for _ in range(self.width)]
             for _ in range(self.height)
         ]
