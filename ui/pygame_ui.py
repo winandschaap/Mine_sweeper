@@ -211,22 +211,37 @@ class PygameUI:
         )
 
     def draw_flag(self, rect: pygame.Rect) -> None:
-        pole_x = rect.left + CELL_SIZE//3
-        pole_top = rect.top + CELL_SIZE//5
-        pole_bottom = rect.bottom - CELL_SIZE//5
 
-        pygame.draw.line(
-            self.screen,
-            RED,
-            (pole_x, pole_top),
-            (pole_x, pole_bottom),
-            3,
-        )
+        # Setting parameters for the drawings
+        pole_top_x, pole_top_y = rect.left + (4*CELL_SIZE)//9 , rect.top + (2 * CELL_SIZE)//9
+        layer1_x, layer1_y = rect.left + (2*CELL_SIZE)//9, rect.top + (7*CELL_SIZE)//9
+        layer2_x, layer2_y = rect.left + (3*CELL_SIZE)//9, rect.top + (6*CELL_SIZE)//9
 
+        pole_width, pole_height = CELL_SIZE // 9, (6 * CELL_SIZE) // 9
+        layer_height = CELL_SIZE // 9
+        layer1_width = (5 * CELL_SIZE) // 9
+        layer2_width = (3 * CELL_SIZE) // 9
+
+        # Creating the rectangular objects
+        pole = pygame.Rect(pole_top_x, pole_top_y, pole_width, pole_height)
+        layer_1 = pygame.Rect(layer1_x, layer1_y, layer1_width, layer_height)
+        layer_2 = pygame.Rect(layer2_x, layer2_y, layer2_width, layer_height)
+
+        pole_parts = [pole, layer_1, layer_2]
+
+        # Draw the pole with base
+        for part in pole_parts:
+            pygame.draw.rect(
+                self.screen,
+                BLACK,
+                part
+            )
+
+        # Flag drawing
         flag_points = [
-            (pole_x, pole_top),
-            (pole_x+CELL_SIZE//3, pole_top + CELL_SIZE//8),
-            (pole_x, pole_top + CELL_SIZE//4),
+            (pole_top_x, pole_top_y - CELL_SIZE//9),
+            (rect.left + (8*CELL_SIZE)//9, rect.top + (3*CELL_SIZE)//9),
+            (pole_top_x, pole_top_y + (3*CELL_SIZE)//9),
         ]
 
         pygame.draw.polygon(self.screen, RED, flag_points)
