@@ -10,6 +10,9 @@ from copy import deepcopy
 
 subset_counter = 0
 def apply_action(action: SolverAction, board: Board, frontier: set[Position]) -> bool:
+    if not action.position:
+        return False
+
     cell = board.get_cell(action.position)
     if action.action_type == SolverActionType.FLAG:
         if cell.is_revealed:

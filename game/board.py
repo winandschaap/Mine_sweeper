@@ -61,6 +61,7 @@ class Board:
         copied.mines_placed = self.mines_placed
         copied._neighbor_cache = self._neighbor_cache
         return copied
+
     def in_bounds(self, pos: Position) -> bool:
         return 0 <= pos.x < self.width and 0 <= pos.y < self.height
 
@@ -146,7 +147,6 @@ class Board:
             result, revealed_positions = self.reveal(neighbor)
             if result == RevealResult.HIT_MINE:
                 return RevealResult.HIT_MINE, set()
-            #cell.is_revealed = True
             added_positions.update(revealed_positions)
         if added_positions:
             return RevealResult.REVEALED, added_positions

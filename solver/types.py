@@ -14,9 +14,9 @@ class SolverUsed(Enum):
 
 @dataclass(frozen=True)
 class SolverAction:
-    position : Position
+    position : Position | None
     action_type : SolverActionType
-    solver_type : SolverUsed = SolverUsed.BASIC
+    solver_type : SolverUsed | None = SolverUsed.BASIC
 
 @dataclass(frozen=True)
 class Constraint:

@@ -1,8 +1,16 @@
-from ui.pygame_ui import PygameUI
+from ui.pygame_ui import PygameUI, get_ui_sizes
 
 
 def main() -> None:
-    game = PygameUI(16, 10, 32, no_check=False)
+    cell_size, top_bar_height = get_ui_sizes()
+    game = PygameUI(
+        16,
+        10,
+        32,
+        no_check=False,
+        cell_size=cell_size,
+        top_bar_height=top_bar_height,
+    )
     game.run()
 
 

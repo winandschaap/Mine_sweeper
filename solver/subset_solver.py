@@ -54,12 +54,11 @@ def actions_from_constraint_pair(a: Constraint, b: Constraint) -> list[SolverAct
 def find_subset_actions(board: Board, frontier: set[Position]) -> list[SolverAction]:
     constraints = build_constraints(board, frontier)
     actions = []
+    constraints_length = len(constraints)
 
-    for a in constraints:
-        for b in constraints:
-            if a == b:
-                continue
-
+    for i in range(constraints_length):
+        for j in range(i + 1, constraints_length):
+            a, b = constraints[i], constraints[j]
             new_actions = actions_from_constraint_pair(a, b)
 
             for action in new_actions:

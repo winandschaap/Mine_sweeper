@@ -45,6 +45,8 @@ class GameState:
         return result
 
     def toggle_hint(self, reset : bool = False) -> None:
+        if self.status in {GameStatus.WON, GameStatus.LOST, GameStatus.NOT_STARTED}:
+            return
         if self.hint:
             if reset:
                 self.toggle_highlight(self.hint.position)
@@ -55,18 +57,17 @@ class GameState:
         self.toggle_highlight(self.hint.position)
 
 
-    def toggle_highlight(self, pos: Position) -> None:
-        if self.status in {GameStatus.WON, GameStatus.LOST}:
+    def toggle_highlight(self, pos: Position|None) -> None:
+        if self.status in {GameStatus.WON, GameStatus.LOST} or not pos:
             return
         cell = self.board.get_cell(pos)
         if cell.is_flagged or cell.is_revealed:
-            return
+            cell.is_hidden = False
         cell.is_highlight = not cell.is_highlight
 
     def toggle_flag(self, pos: Position) -> None:
-        if self.status in {GameStatus.WON, GameStatus.LOST}:
+        if self.status in {GameStatus.WON, GameStatus.LOST} or self.board.remaining_flags() == 0 and not self.board.get_cell(pos).is_flagged:
             return
-
         self.board.toggle_flag(pos)
 
     def reset(self) -> None:
@@ -76,10 +77,6 @@ class GameState:
         self.end_time = None
         self.hint = None
         self.hint_count = 0
-
-
-    def remaining_flags(self) -> int:
-        return self.board.remaining_flags()
 
     def current_time(self) -> str:
         if not self.start_time:
@@ -94,3 +91,11 @@ class GameState:
             return self.end_time if self.status == GameStatus.WON else f"DNF: It took {self.end_time} to lose."
 
         return f"{int(minutes):02d}:{int(seconds):02d}"
+
+    def check_hint_status(self) -> None:
+        if self.status in {GameStatus.WON, GameStatus.LOST}:
+            return
+        if self.hint:
+            hint_cell = self.board.get_cell(self.hint.position)
+            if hint_cell.is_flagged or hint_cell.is_revealed:
+                self.toggle_hint(True)
