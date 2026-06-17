@@ -2,6 +2,7 @@ import pygame
 from game.game_state import GameState
 from game.types import GameStatus, Position
 from ui.buttons import create_restart_button, create_hint_button
+from ui.layout import create_layout, create_layout_for_window
 
 FPS = 60
 
@@ -26,48 +27,77 @@ def get_display_size() -> tuple[int, int]:
     display_info = pygame.display.Info()
     return display_info.current_w, display_info.current_h
 
-
-def get_ui_sizes() -> tuple[int, int]:
-    _, screen_height = get_display_size()
-    return screen_height // 15, screen_height // 12
-
-
 class PygameUI:
     def __init__(
         self,
-        width: int = 9,
-        height: int = 9,
-        mine_count: int = 16,
+        width: int = 16,
+        height: int = 10,
+        mine_count: int = 32,
         no_check: bool = False,
-        cell_size: int | None = None,
-        top_bar_height: int | None = None,
+        fullscreen: bool = False,
+        window_scale: float = 0.75,
+        resizable: bool = True,
     ):
         pygame.display.init()
         pygame.font.init()
 
-        if cell_size is None or top_bar_height is None:
-            default_cell_size, default_top_bar_height = get_ui_sizes()
-            cell_size = cell_size or default_cell_size
-            top_bar_height = top_bar_height or default_top_bar_height
+        screen_width, screen_height = get_display_size()
 
-        self.cell_size = cell_size
-        self.top_bar_height = top_bar_height
+        requested_layout = create_layout(
+            screen_width,
+            screen_height,
+            width,
+            height,
+            fullscreen = fullscreen,
+            window_scale = window_scale
+        )
+
+        self.board_width = width
+        self.board_height = height
+        self.fullscreen = fullscreen
+        self.resizable = resizable
+        self.windowed_size = (
+            requested_layout.window_width,
+            requested_layout.window_height,
+        )
         self.no_check = no_check
         self.game = GameState(width, height, mine_count, self.no_check)
-        self.screen_width = width * self.cell_size
-        self.screen_height = height * self.cell_size + self.top_bar_height
-        self.screen = pygame.display.set_mode(
-            (self.screen_width, self.screen_height)
-        )
+
+        self.screen = self.create_display_surface()
+        self.apply_layout()
 
         pygame.display.set_caption("Minesweeper")
 
         self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont(None, (2*self.cell_size) //3)
-        self.big_font = pygame.font.SysFont(None, 2 * self.cell_size)
-        self.background_big_font = pygame.font.SysFont(None, (21 * self.cell_size)//10)
         self.running = True
 
+    def create_display_surface(self) -> pygame.Surface:
+        if self.fullscreen:
+            return pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+
+        display_flags = pygame.RESIZABLE if self.resizable else 0
+        return pygame.display.set_mode(self.windowed_size, display_flags)
+
+    def apply_layout(self) -> None:
+        actual_width, actual_height = self.screen.get_size()
+
+        self.layout = create_layout_for_window(
+            actual_width,
+            actual_height,
+            self.board_width,
+            self.board_height,
+        )
+        self.cell_size = self.layout.cell_size
+        self.top_bar_height = self.layout.top_bar_height
+        self.screen_width = self.layout.window_width
+        self.screen_height = self.layout.window_height
+
+        self.font = pygame.font.SysFont(None, max(12, (2*self.cell_size) //3))
+        self.big_font = pygame.font.SysFont(None, max(24, 2 * self.cell_size))
+        self.background_big_font = pygame.font.SysFont(None, max(24, (21 * self.cell_size)//10))
+        self.rebuild_buttons()
+
+    def rebuild_buttons(self) -> None:
         self.buttons = [
             create_restart_button(
                 self.screen_width,
@@ -82,6 +112,25 @@ class PygameUI:
                 self.game.toggle_hint
             )
         ]
+
+    def toggle_fullscreen(self) -> None:
+        if self.fullscreen:
+            self.fullscreen = False
+            self.screen = self.create_display_surface()
+        else:
+            self.windowed_size = self.screen.get_size()
+            self.fullscreen = True
+            self.screen = self.create_display_surface()
+
+        self.apply_layout()
+
+    def resize_window(self, size: tuple[int, int]) -> None:
+        if self.fullscreen:
+            return
+
+        self.windowed_size = size
+        self.screen = self.create_display_surface()
+        self.apply_layout()
 
     def run(self) -> None:
         while self.running:
@@ -99,14 +148,25 @@ class PygameUI:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.game.reset()
+                elif event.key == pygame.K_F11:
+                    self.toggle_fullscreen()
                 elif event.key == pygame.K_h:
                     if self.game.status == GameStatus.RUNNING:
                         self.game.toggle_hint()
 
+            elif event.type == pygame.VIDEORESIZE:
+                if self.resizable:
+                    self.resize_window(event.size)
+
             elif event.type == pygame.MOUSEBUTTONDOWN:
+                button_was_clicked = False
                 for button in self.buttons:
                     if button.handle_event(event):
-                        continue
+                        button_was_clicked = True
+                        break
+
+                if button_was_clicked:
+                    continue
 
                 pos = self.screen_to_position(event.pos)
 
@@ -122,11 +182,16 @@ class PygameUI:
     def screen_to_position(self, mouse_pos) -> Position | None:
         mx, my = mouse_pos
 
-        if my < self.top_bar_height:
+        board_left = self.layout.board_offset_x
+        board_top = self.layout.board_offset_y
+        board_right = board_left + self.layout.board_pixel_width
+        board_bottom = board_top + self.layout.board_pixel_height
+
+        if not (board_left <= mx < board_right and board_top <= my < board_bottom):
             return None
 
-        x = mx // self.cell_size
-        y = (my-self.top_bar_height) // self.cell_size
+        x = (mx - board_left) // self.cell_size
+        y = (my-board_top) // self.cell_size
 
         pos = Position(x, y)
 
@@ -147,7 +212,7 @@ class PygameUI:
         pygame.draw.rect(
             self.screen,
             BG,
-            pygame.Rect(0,0, self.screen_width, self.screen_height),
+            pygame.Rect(0, 0, self.screen_width, self.top_bar_height),
         )
 
         flags_text = self.font.render(
@@ -163,8 +228,8 @@ class PygameUI:
         timer_text = self.font.render(f"Time: {self.game.current_time()}", True, TEXT)
         self.screen.blit(timer_text, (self.cell_size//4, (timer_text.get_height()+self.top_bar_height)//2))
 
-        hints_text = self.font.render(f"Hints used (h): {self.game.hint_count}", True, TEXT)
-        self.screen.blit(hints_text, (self.screen_width - hints_text.get_width()-self.cell_size//4,(hints_text.get_height()+self.top_bar_height)//2))
+#        hints_text = self.font.render(f"Hints used (h): {self.game.hint_count}", True, TEXT)
+#        self.screen.blit(hints_text, (self.screen_width - hints_text.get_width()-self.cell_size//4,(hints_text.get_height()+self.top_bar_height)//2))
 
 
     def draw_board(self) -> None:
@@ -176,8 +241,8 @@ class PygameUI:
                 cell = board.get_cell(pos)
 
                 rect = pygame.Rect(
-                    x*self.cell_size,
-                    self.top_bar_height + y*self.cell_size,
+                    self.layout.board_offset_x + x * self.cell_size,
+                    self.layout.board_offset_y + y * self.cell_size,
                     self.cell_size,
                     self.cell_size,
                 )
