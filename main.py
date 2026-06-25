@@ -3,9 +3,9 @@ from ui.pygame_ui import PygameUI
 
 def main() -> None:
     game = PygameUI(
-        24,
-        15,
-        72    ,
+        30,
+        16,
+        96  ,
         no_check=False,
         fullscreen=False,
         window_scale=0.75,

@@ -4,7 +4,6 @@ from collections import deque
 from game.cell import Cell
 from game.types import Position, RevealResult
 
-
 class Board:
     _neighbor_caches: dict[
         tuple[int, int],
