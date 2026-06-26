@@ -7,6 +7,7 @@ class SolverActionType(Enum):
     OPEN = 'open'
     FLAG = 'flag'
     NO_MOVE_FOUND = 'no_move_found'
+    UNFLAG = 'unflag'
 
 class SolverUsed(Enum):
     BASIC = 'basic'

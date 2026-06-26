@@ -5,6 +5,7 @@ from generator.random_generator import generate_board
 import time
 
 from solver.hints import get_solve_step
+from solver.types import SolverActionType
 
 
 class GameState:
@@ -97,5 +98,8 @@ class GameState:
             return
         if self.hint:
             hint_cell = self.board.get_cell(self.hint.position)
+            if self.hint.action_type == SolverActionType.UNFLAG and not hint_cell.is_flagged:
+                self.toggle_hint(True)
+
             if hint_cell.is_flagged or hint_cell.is_revealed:
                 self.toggle_hint(True)
