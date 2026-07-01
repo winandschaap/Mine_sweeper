@@ -1,10 +1,16 @@
 import pygame
 import ctypes
 import ctypes.wintypes
+
+from pywin.framework.scriptutils import JumpToDocument
+
+from game.difficulty import Difficulty, mine_count_for_difficulty, BoardSize
 from game.game_state import GameState
 from game.types import GameStatus, Position
+from ui.button import Button
 from ui.buttons import create_restart_button, create_hint_button
 from ui.layout import create_layout, create_layout_for_window, Layout
+from ui.menu import MenuOption, ScreenState, create_menu_buttons, create_menu_options
 
 FPS = 60
 FULLSCREEN_TOGGLE_DEBOUNCE_MS = 750
@@ -41,6 +47,7 @@ RED = (220, 60, 60)
 GREEN = (70, 180, 90)
 BLUE = (70, 120, 220)
 YELLOW = (230, 190, 60)
+WHITE = (255, 255, 255)
 CELL_HIDDEN = (90, 90, 100)
 CELL_REVEALED = (185, 185, 190)
 CELL_BORDER = (45, 45, 50)
@@ -138,6 +145,10 @@ class PygameUI:
 
         self.board_width = width
         self.board_height = height
+        self.mine_count = mine_count
+        self.board_size = None
+        self.difficulty = None
+
         self.fullscreen = fullscreen
         self.resizable = resizable
         self.windowed_size = (
@@ -157,8 +168,16 @@ class PygameUI:
 
         self.font = pygame.font.SysFont(None, 24)
         self.big_font = pygame.font.SysFont(None, 48)
+        self.menu_font = pygame.font.SysFont(None, 48)
+        self.menu_header_font = pygame.font.SysFont(None, 48)
         self.background_big_font = pygame.font.SysFont(None, 48)
+
+        # Buttons
+        self.options = create_menu_options()
+
         self.buttons = []
+        self.board_size_buttons = []
+        self.difficulty_buttons = []
 
         self.screen = self.create_display_surface()
         self.apply_layout()
@@ -205,6 +224,8 @@ class PygameUI:
 
         self.font = pygame.font.SysFont(None, max(12, (2*self.cell_size) //3))
         self.big_font = pygame.font.SysFont(None, max(24, 2 * self.cell_size))
+        self.menu_font = pygame.font.SysFont(None, self.screen_height //16)
+        self.menu_header_font = pygame.font.SysFont(None, self.screen_height //12)
         self.background_big_font = pygame.font.SysFont(None, max(24, (21 * self.cell_size)//10))
         self.rebuild_buttons()
 
@@ -213,16 +234,30 @@ class PygameUI:
             create_restart_button(
                 self.screen_width,
                 self.top_bar_height,
-                self.font,
-                self.game.reset
+                self.restart
             ),
             create_hint_button(
                 self.screen_width,
                 self.top_bar_height,
-                self.font,
                 self.game.toggle_hint
             )
         ]
+
+        self.difficulty_buttons = create_menu_buttons(
+            [option for option in self.options if type(option.value) == Difficulty],
+            self.screen_width,
+            self.screen_height,
+            self.menu_font,
+            self.menu_action
+        )
+
+        self.board_size_buttons = create_menu_buttons(
+            [option for option in self.options if type(option.value) == BoardSize],
+            self.screen_width,
+            self.screen_height,
+            self.menu_font,
+            self.menu_action
+        )
 
     def toggle_fullscreen(self) -> None:
         now = pygame.time.get_ticks()
@@ -319,7 +354,7 @@ class PygameUI:
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.game.reset()
+                    self.restart()
                 elif event.key == pygame.K_F11:
                     if not self.f11_is_down:
                         self.f11_is_down = True
@@ -338,7 +373,7 @@ class PygameUI:
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 button_was_clicked = False
-                for button in self.buttons:
+                for button in self.active_buttons():
                     if button.handle_event(event):
                         button_was_clicked = True
                         break
@@ -383,6 +418,7 @@ class PygameUI:
         self.draw_top_bar()
         self.draw_board()
         self.draw_buttons()
+        self.draw_menu()
 
         pygame.display.flip()
 
@@ -532,5 +568,95 @@ class PygameUI:
         pygame.draw.polygon(self.screen, RED, flag_points)
 
     def draw_buttons(self) -> None:
-        for button in self.buttons:
+        for button in self.active_buttons():
             button.draw(self.screen)
+
+
+    # Actions for switching screen states
+
+    def menu_action(self, option : MenuOption) -> None:
+        if type(option.value) == BoardSize:
+            self.set_board_size(option.value)
+        elif type(option.value) == Difficulty:
+            self.set_difficulty(option.value)
+        self.game.update_board(self.board_width, self.board_height, self.mine_count)
+        self.resize_window(self)
+
+    def set_board_size(self, boardsize : BoardSize) -> None:
+        self.board_width = boardsize.width
+        self.board_height = boardsize.height
+        self.board_size = boardsize
+        self.game.screen_state = ScreenState.DIFFICULTY
+
+    def set_difficulty(self, difficulty: Difficulty) -> None:
+        if not self.board_size:
+            return
+        self.difficulty = difficulty
+        self.mine_count = mine_count_for_difficulty(self.board_size, difficulty)
+        self.game.screen_state = ScreenState.GAME
+
+    def draw_menu(self) -> None:
+        if self.game.screen_state != ScreenState.GAME:
+            self.draw_menu_background()
+            self.draw_menu_text()
+            self.draw_menu_buttons()
+
+    def draw_menu_background(self) -> None:
+        pygame.draw.rect(
+            self.screen,
+            (40,40,40),
+            pygame.Rect(
+                self.screen_width//3,
+                0,
+                self.screen_width//3,
+                self.screen_height)
+        )
+        pygame.draw.rect(
+            self.screen,
+            (50,50,50),
+            pygame.Rect(
+                self.screen_width//3,
+                0,
+                self.screen_width//3,
+                self.screen_height),
+                self.screen_width//150
+        )
+
+    def draw_menu_text(self) -> None:
+
+        menu_text = self.menu_header_font.render(self.get_menu_text_str(), True, TEXT)
+        self.screen.blit(
+            menu_text,
+            (self.screen_width // 2 - menu_text.get_width()//2,
+             self.screen_height // 9 - menu_text.get_height()//2)
+        )
+
+    def get_menu_text_str(self) -> str:
+        if self.game.screen_state == ScreenState.BOARD_SIZE:
+            return 'Choose board size'
+        if self.game.screen_state == ScreenState.DIFFICULTY:
+            return 'Choose difficulty'
+        return ''
+
+
+    def draw_menu_buttons(self) -> None:
+        if self.game.screen_state == ScreenState.GAME:
+            return
+        if self.game.screen_state == ScreenState.DIFFICULTY:
+            for button in self.difficulty_buttons:
+                button.draw(self.screen)
+            return
+        if self.game.screen_state == ScreenState.BOARD_SIZE:
+            for button in self.board_size_buttons:
+                button.draw(self.screen)
+
+    def active_buttons(self) -> list[Button]:
+        if self.game.screen_state == ScreenState.GAME:
+            return self.buttons
+        if self.game.screen_state == ScreenState.DIFFICULTY:
+            return self.difficulty_buttons
+        return self.board_size_buttons
+
+    def restart(self):
+        self.game.reset()
+        self.mine_count = 0

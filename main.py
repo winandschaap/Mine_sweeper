@@ -3,8 +3,8 @@ from ui.pygame_ui import PygameUI
 
 def main() -> None:
     game = PygameUI(
-        15,
-        8,
+        16,
+        9,
         24  ,
         no_check=False,
         fullscreen=False,

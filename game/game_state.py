@@ -6,6 +6,7 @@ import time
 
 from solver.hints import get_solve_step
 from solver.types import SolverActionType
+from ui.menu import ScreenState
 
 
 class GameState:
@@ -21,6 +22,7 @@ class GameState:
         self.end_time = None
         self.hint = None
         self.hint_count = 0
+        self.screen_state = ScreenState.BOARD_SIZE
 
     def reveal_cell(self, pos: Position) -> RevealResult:
         if self.status == GameStatus.NOT_STARTED:
@@ -55,6 +57,9 @@ class GameState:
             return
         self.hint_count += 1
         self.hint = get_solve_step(board=self.board)
+        if self.hint.action_type == SolverActionType.NO_MOVE_FOUND:
+            self.hint = None
+            return
         self.toggle_highlight(self.hint.position)
 
 
@@ -76,8 +81,10 @@ class GameState:
         self.status = GameStatus.NOT_STARTED
         self.start_time = None
         self.end_time = None
+        self.mine_count = 0
         self.hint = None
         self.hint_count = 0
+        self.screen_state = ScreenState.BOARD_SIZE
 
     def current_time(self) -> str:
         if not self.start_time:
@@ -97,9 +104,16 @@ class GameState:
         if self.status in {GameStatus.WON, GameStatus.LOST}:
             return
         if self.hint:
+            if self.hint.position is None:
+                self.hint = None
+                return
             hint_cell = self.board.get_cell(self.hint.position)
             if self.hint.action_type == SolverActionType.UNFLAG and not hint_cell.is_flagged:
                 self.toggle_hint(True)
 
             if hint_cell.is_flagged or hint_cell.is_revealed:
                 self.toggle_hint(True)
+
+    def update_board(self, width: int, height: int, mine_count: int) -> None:
+        self.width, self.height, self.mine_count = width, height, mine_count
+        self.board = Board(self.width, self.height, self.mine_count)

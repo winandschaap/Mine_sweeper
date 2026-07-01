@@ -23,9 +23,17 @@ class Button:
     def draw(self, screen: pygame.Surface) -> None:
         mouse_pos = pygame.mouse.get_pos()
         color = self.hover_bg if self.rect.collidepoint(mouse_pos) else self.bg
+        border_radius = max(2, min(self.rect.width, self.rect.height) // 6)
+        border_width = max(1, min(self.rect.width, self.rect.height) // 18)
 
-        pygame.draw.rect(screen, color, self.rect, border_radius=6)
-        pygame.draw.rect(screen, self.text_color, self.rect, 2, border_radius=6)
+        pygame.draw.rect(screen, color, self.rect, border_radius=border_radius)
+        pygame.draw.rect(
+            screen,
+            self.text_color,
+            self.rect,
+            border_width,
+            border_radius=border_radius
+        )
 
         text_surface = self.font.render(self.text, True, self.text_color)
         text_rect = text_surface.get_rect(center=self.rect.center)

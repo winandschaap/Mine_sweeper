@@ -7,7 +7,7 @@ def build_constraints(board: Board, frontier: set[Position]) -> list[Constraint]
 
     constraints = []
 
-    for position in frontier:
+    for position in sorted(frontier, key=lambda pos: (pos.y, pos.x)):
         cell = board.get_cell(position)
         unknown = []
         flagged_count = cell.neighbors_flagged
@@ -35,7 +35,9 @@ def build_constraints(board: Board, frontier: set[Position]) -> list[Constraint]
 def actions_from_constraint_pair(a: Constraint, b: Constraint) -> list[SolverAction]:
     actions = []
 
-    if not a.cells < b.cells:
+    if b.cells < a.cells:
+        a, b = b, a
+    elif not a.cells < b.cells:
         return actions
 
     diff_cells = b.cells - a.cells

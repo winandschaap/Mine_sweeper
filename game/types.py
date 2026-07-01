@@ -17,3 +17,4 @@ class RevealResult(Enum):
     REVEALED = 'revealed'
     HIT_MINE = 'hit mine'
     WON = 'won'
+

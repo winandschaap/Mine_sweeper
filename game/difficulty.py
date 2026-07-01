@@ -13,9 +13,9 @@ class Difficulty:
 
 BOARD_SIZES = {
     "small": BoardSize("Small", 8, 5),
-    "medium": BoardSize("Medium", 16, 10),
+    "medium": BoardSize("Medium", 16, 9),
     "large": BoardSize("Large", 24, 15),
-    "huge": BoardSize("Huge", 32, 20)
+    "huge": BoardSize("Huge", 32, 18)
 }
 
 DIFFICULTIES = {
