@@ -167,6 +167,7 @@ class PygameUI:
         self.screen_height: int = 1
 
         self.font = pygame.font.SysFont(None, 24)
+        self.top_bar_font = pygame.font.SysFont(None, 24)
         self.big_font = pygame.font.SysFont(None, 48)
         self.menu_font = pygame.font.SysFont(None, 48)
         self.menu_header_font = pygame.font.SysFont(None, 48)
@@ -223,6 +224,7 @@ class PygameUI:
         self.screen_height = self.layout.window_height
 
         self.font = pygame.font.SysFont(None, max(12, (2*self.cell_size) //3))
+        self.top_bar_font = pygame.font.SysFont(None, max(12, (2 * self.top_bar_height) // 5))
         self.big_font = pygame.font.SysFont(None, max(24, 2 * self.cell_size))
         self.menu_font = pygame.font.SysFont(None, self.screen_height //16)
         self.menu_header_font = pygame.font.SysFont(None, self.screen_height //12)
@@ -378,7 +380,7 @@ class PygameUI:
                         button_was_clicked = True
                         break
 
-                if button_was_clicked:
+                if button_was_clicked or self.game.screen_state != ScreenState.GAME:
                     continue
 
                 pos = self.screen_to_position(event.pos)
@@ -429,7 +431,7 @@ class PygameUI:
             pygame.Rect(0, 0, self.screen_width, self.top_bar_height),
         )
 
-        flags_text = self.font.render(
+        flags_text = self.top_bar_font.render(
             f'Flags: {self.game.board.remaining_flags()}',
             True,
             TEXT
@@ -439,7 +441,7 @@ class PygameUI:
 #        restart_text = self.font.render("ESC = restart", True, TEXT)
 #        self.screen.blit(restart_text, (self.screen_width - restart_text.get_width()-self.cell_size//4, restart_text.get_height()//2))
 
-        timer_text = self.font.render(f"Time: {self.game.current_time()}", True, TEXT)
+        timer_text = self.top_bar_font.render(f"Time: {self.game.current_time()}", True, TEXT)
         self.screen.blit(timer_text, (self.cell_size//4, (timer_text.get_height()+self.top_bar_height)//2))
 
 #        hints_text = self.font.render(f"Hints used (h): {self.game.hint_count}", True, TEXT)
